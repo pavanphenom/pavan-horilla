@@ -13,7 +13,6 @@ from threading import Event, Thread
 from urllib.parse import parse_qs, unquote
 
 import pytz
-import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
@@ -29,8 +28,6 @@ from attendance.methods.utils import Request
 from attendance.models import AttendanceActivity
 from attendance.views.clock_in_out import clock_in, clock_out
 from base.methods import get_key_instances, get_pagination
-from biometric.anviz import CrossChexCloudAPI
-from biometric.etimeoffice import ETimeOfficeAPI
 from employee.models import Employee, EmployeeWorkInformation
 from horilla.decorators import (
     hx_request_required,
@@ -42,8 +39,10 @@ from horilla.filters import HorillaPaginator
 from horilla.horilla_settings import BIO_DEVICE_THREADS
 from horilla.settings import TIME_ZONE
 
+from .anviz import CrossChexCloudAPI
 from .cosec import COSECBiometric
 from .dahua import DahuaAPI
+from .etimeoffice import ETimeOfficeAPI
 from .filters import BiometricDeviceFilter
 from .forms import (
     BiometricDeviceForm,
@@ -174,7 +173,7 @@ class ZKBioAttendance(Thread):
                                 device.last_fetch_time = time
                                 device.save()
                                 bio_id = BiometricEmployees.objects.filter(
-                                    user_id=user_id
+                                    user_id=user_id, device_id=device
                                 ).first()
                                 if bio_id:
                                     if punch_code in {0, 3, 4}:
@@ -888,6 +887,12 @@ def biometric_device_test(request, device_id):
 @hx_request_required
 @permission_required("biometric.view_biometricdevices")
 def biometric_device_fetch_logs(request, device_id):
+    """
+    Fetches biometric attendance logs from a specified device.
+
+    This view function connects to a biometric device based on the device type (zk, anviz, cosec, dahua, or etimeoffice)
+    and retrieves the attendance logs.
+    """
     device = BiometricDevices.find(device_id)
     if not device:
         return HttpResponse("Device not found.", status=404)
@@ -1783,6 +1788,9 @@ def add_biometric_user(request, device_id):
 @install_required
 @hx_request_required
 def map_biometric_users(request, device_id):
+    """
+    Maps an horilla employee to a biometric user on a specified biometric device.
+    """
     device = BiometricDevices.find(device_id)
     form = MapBioUsers(request.POST or None)
     template = "biometric_users/dahua/map_dahua_users.html"
@@ -1819,6 +1827,11 @@ def map_biometric_users(request, device_id):
 @install_required
 @hx_request_required
 def add_dahua_biometric_user(request, device_id):
+    """
+    Adds a new employee to a Dahua biometric device.
+
+    This view handles the process of adding an employee as a user to a Dahua biometric device.
+    """
     device = BiometricDevices.find(device_id)
     form = DahuaUserForm()
     if request.method == "POST":
@@ -1880,6 +1893,9 @@ def add_dahua_biometric_user(request, device_id):
 @hx_request_required
 @install_required
 def find_employee_badge_id(request):
+    """
+    Retrieves the badge ID of an employee based on their employee ID.
+    """
     employee_id = request.GET.get("employee")
     user_id = Employee.objects.get(id=employee_id).badge_id if employee_id else ""
     input_field = f"""
@@ -1893,6 +1909,9 @@ def find_employee_badge_id(request):
 @hx_request_required
 @install_required
 def delete_dahua_user(request, obj_id=None):
+    """
+    Deletes a Dahua biometric user or multiple users from a device.
+    """
     script = "<script>window.location.reload();</script>"
     try:
         if request.method == "POST" and obj_id:
@@ -1935,6 +1954,9 @@ def delete_dahua_user(request, obj_id=None):
 @hx_request_required
 @permission_required("biometric.delete_biometricemployees")
 def delete_etimeoffice_user(request, obj_id=None):
+    """
+    Deletes a user or multiple users from the eTimeOffice biometric system.
+    """
     script = "<script>window.location.href = '/';</script>"
     if request.method == "POST":
         user = BiometricEmployees.objects.get(id=obj_id)
@@ -2129,13 +2151,17 @@ def zk_biometric_attendance_logs(device):
         device.last_fetch_date = last_attendance_datetime.date()
         device.last_fetch_time = last_attendance_datetime.time()
         device.save()
+        bio_id_map = {
+            bio.user_id: bio
+            for bio in BiometricEmployees.objects.filter(device_id=device)
+        }
         for attendance in filtered_attendances:
             user_id = attendance.user_id
             punch_code = attendance.punch
             date_time = django_timezone.make_aware(attendance.timestamp)
             date = date_time.date()
             time = date_time.time()
-            bio_id = BiometricEmployees.objects.filter(user_id=user_id).first()
+            bio_id = bio_id_map.get(user_id)
             if bio_id:
                 request_data = Request(
                     user=bio_id.employee_id.employee_user_id,
@@ -2232,12 +2258,18 @@ def anviz_biometric_attendance_logs(device):
 
 
 def anviz_biometric_attendance_scheduler(device_id):
+    """
+    Schedules the attendance log retrieval for an Anviz biometric device.
+    """
     device = BiometricDevices.find(device_id)
     if device and device.is_scheduler:
         anviz_biometric_attendance_logs(device)
 
 
 def cosec_biometric_attendance_logs(device):
+    """
+    Retrieves and processes attendance logs from a COSEC biometric device.
+    """
     device_args = COSECAttendanceArguments.objects.filter(device_id=device).first()
     last_fetch_roll_ovr_count = (
         int(device_args.last_fetch_roll_ovr_count) if device_args else 0
@@ -2389,12 +2421,18 @@ def dahua_biometric_attendance_logs(device):
 
 
 def dahua_biometric_attendance_scheduler(device_id):
+    """
+    Schedules the attendance log retrieval for a Dahua biometric device.
+    """
     device = BiometricDevices.find(device_id)
     if device and device.is_scheduler:
         dahua_biometric_attendance_logs(device)
 
 
 def etimeoffice_biometric_attendance_logs(device):
+    """
+    Retrieves and processes attendance logs from an eTimeOffice biometric device.
+    """
     now = datetime.now()
     etimeoffice = ETimeOfficeAPI(
         username=device.bio_username,
@@ -2462,6 +2500,9 @@ def etimeoffice_biometric_attendance_logs(device):
 
 
 def etimeoffice_biometric_attendance_scheduler(device_id):
+    """
+    Schedules the attendance log retrieval for an eTimeOffice biometric device.
+    """
     device = BiometricDevices.find(device_id)
     if device and device.is_scheduler:
         etimeoffice_biometric_attendance_logs(device)
