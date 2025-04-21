@@ -78,8 +78,8 @@
 
     </div>
 
-    <div class="text-center">
-        <button id="reset-btn" class="oh-btn--secondary elmt-dsbl">Reset All</button>
+    <div>
+        <button id="reset-btn" class="oh-btn oh-btn--secondary elmt-dsbl">Reset All</button>
     </div>
 </div>
 
@@ -112,21 +112,21 @@ input[type="color"] {
     cursor: pointer;
 }
 #reset-btn {
-    padding: 8px 16px;
-    background: #4a90e2;
-    color: white;
-    border: none;
-    border-radius: 4px;
     margin-top: 15px;
+    font-size: 15px;
     cursor: pointer;
+    display: inline-block;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .disabled-element {
   pointer-events: none;
   opacity: 0.6;
   cursor: not-allowed;
-  display: inline-block; /* força a manter-se inline-block para poder ser centrado */
-  text-align: center; /* (opcional, mas normalmente não precisa para o botão) */
+  display: inline-block;
+  text-align: center;
   margin-left: auto;
   margin-right: auto;
 }
