@@ -59,10 +59,10 @@ function hexToHsl(hex) {
 // Controls and their default values
 const controls = [
   { id: 'sbar', cssClass: '.oh-sidebar', property: 'background-color', default: 'hsl(0, 0%, 13%)' },
-  { id: 'company-bg', cssClass: '.oh-sidebar__company', property: 'background-color', default: 'hsl(0, 0%, 20%)' },
+  { id: 'company-bg', cssClass: '.oh-sidebar__company', property: 'background-color', default: 'hsl(0, 0%, 13%)' },
   { id: 'menu-link', cssClass: '.oh-sidebar__menu-link', property: 'background-color', default: 'hsl(0, 0%, 20%)' },
-  { id: 'active-menu-link', cssClass: '.oh-sidebar__menu-link--active', property: 'background-color', default: 'hsl(8, 77%, 56%)' },
-  { id: 'submenu', cssClass: '.oh-sidebar__submenu', property: 'background-color', default: 'hsl(0, 0%, 20%)' },
+  { id: 'active-menu-link', cssClass: '.oh-sidebar__menu-link--active', property: 'background-color', default: 'hsl(0, 0%, 20%)' },
+  { id: 'submenu', cssClass: '.oh-sidebar__submenu', property: 'background-color', default: 'hsl(0, 0%, 13%)' },
   { id: 'submenu-link', cssClass: '.oh-sidebar__submenu-link', property: 'color', default: 'hsl(0, 0%, 100%)' },
   { id: 'submenu-link-active', cssClass: '.oh-sidebar__submenu-link.active', property: 'color', default: 'hsl(0, 0%, 70%)' },
   { id: 'secondary-btn', cssClass: '.oh-btn--secondary', property: 'background-color', default: 'hsl(8, 77%, 56%)' },
