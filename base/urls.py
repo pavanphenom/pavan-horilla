@@ -1079,5 +1079,7 @@ urlpatterns = [
 
     path('update-company-color/', update_company_color, name='update-company-color'),
 
+    path('reset-company-colors/', views.reset_company_colors, name='reset-company-colors'),
+
     path('theme-settings/', theme_personalization_view, name='theme-personalization'),
 ]
