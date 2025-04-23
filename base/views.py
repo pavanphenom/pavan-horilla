@@ -7443,6 +7443,39 @@ def update_company_color(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=400)
 
+@csrf_exempt
+@login_required
+def reset_company_colors(request):
+    try:
+        company_id = request.session.get('selected_company')
+
+        if not company_id or company_id == 'all':
+            return JsonResponse({'error': 'Cannot reset colors for "all" companies.'}, status=400)
+        
+        company = Company.objects.get(id=company_id)
+
+        defaults = {
+            'sbar': "hsl(0, 0%, 13%)",
+            'company_bg': "hsl(0, 0%, 13%)", 
+            'menu_link': "hsl(0, 0%, 20%)",
+            'active_menu_link': "hsl(0, 0%, 20%)",
+            'submenu': "hsl(0, 0%, 13%)",
+            'submenu_link': "hsl(0, 0%, 100%)",
+            'submenu_link_active': "hsl(0, 0%, 70%)",
+            'secondary_btn': "hsl(8, 77%, 56%)",
+            'page_bg': "hsl(0, 0%, 97.5%)"
+        }
+
+        for field, value in defaults.items():
+            setattr(company, field, value)
+        company.save()
+
+        return JsonResponse({'success': True, 'colors': defaults})
+    except Company.DoesNotExist:
+        return JsonResponse({'error': 'Company not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
 
 def theme_personalization_view(request):
     
