@@ -172,65 +172,69 @@ function applyColors(colors) {
   
 // Reset all colors to their default values and update the backend.
 async function resetColorsToDefault() {
-  controls.forEach(({ id, cssClass, property, default: defaultColor }) => {
-    const defaultHex = defaultColor.startsWith('hsl') ? hslToHex(defaultColor) : defaultColor;
-    const picker = document.getElementById(id);
-    const display = document.getElementById(`${id}-val`);
-    if (picker) picker.value = defaultHex;
-    if (display) display.textContent = defaultColor;
-    document.querySelectorAll(cssClass).forEach(element => {
-      element.style[property] = defaultHex;
-    });
-  });
   
-  // Send updates for all controls to the backend.
   try {
-    const savePromises = controls.map(({ id, default: defaultColor }) => {
-      const defaultHex = defaultColor.startsWith('hsl') ? hslToHex(defaultColor) : defaultColor;
-      return fetch('/update-company-color/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          color_id: id,
-          color_value: defaultHex
-        })
+    const response = await fetch('/reset-company-colors/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    if (!response.ok) {
+      console.error('Reset failed:', await response.text());
+      return;
+    }
+    const data = await response.json();
+
+    const defaultColors = data.colors;
+    
+
+    controls.forEach(({ id, cssClass, property, default: controlDefault }) => {
+
+      const defaultHex = controlDefault.startsWith('hsl') ? hslToHex(controlDefault) : controlDefault;
+      
+      const picker = document.getElementById(id);
+      if (picker) {
+        picker.value = defaultHex;
+      }
+      
+      const display = document.getElementById(`${id}-val`);
+      if (display) {
+        display.textContent = controlDefault;
+      }
+      
+      document.querySelectorAll(cssClass).forEach(element => {
+        element.style.setProperty(property, defaultHex, 'important');
       });
     });
-    await Promise.all(savePromises);
-    console.log("All colors successfully reset to defaults and saved to the backend.");
-  } catch (error) {
-    console.error("Error saving default colors to the backend:", error);
-  }
+    
+    window.currentColors = defaultColors;
+    
+    document.querySelectorAll('[id*="Modal"]').forEach(modal => {
+      applyColorsToModal(modal, window.currentColors);
+    });
+    
+    console.log("All colors were reset.");
   
-  location.reload();
+  } catch (error) {
+    console.error('Error during reset:', error);
+  }
 }
   
-// Main Initialization
 document.addEventListener('DOMContentLoaded', async () => {
   const urlParams = new URLSearchParams(window.location.search);
-  const companyId = urlParams.get('company_id') || 'all'; // Identify the active company ID.
+  const companyId = urlParams.get('company_id') || 'all';
   
-  // Fetch colors from the backend based on the active company ID.
-  const colors = await fetchCompanyColors(companyId);
+  window.currentColors = await fetchCompanyColors(companyId);
   
-  // Apply global colors to the page.
-  applyColors(colors);
+  applyColors(window.currentColors);
   
-  // Configure modals: apply colors dynamically and monitor changes.
   document.querySelectorAll('[id*="Modal"]').forEach(modal => {
-  
     const observer = new MutationObserver(() => {
-      applyColorsToModal(modal, colors);
+      applyColorsToModal(modal, window.currentColors);
     });
-  
     observer.observe(modal, { childList: true, subtree: true });
-  
-    applyColorsToModal(modal, colors);
+    applyColorsToModal(modal, window.currentColors);
   });
   
-  // Configure the "Reset All" button, if present.
   const resetBtn = document.getElementById('reset-btn');
   if (resetBtn) {
     resetBtn.addEventListener('click', resetColorsToDefault);
